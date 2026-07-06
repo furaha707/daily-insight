@@ -1,8 +1,28 @@
 export interface DbUser {
   id: string;
   categories: string[];
+  slack_webhook_url: string | null;
+  message_template: string | null;
+  send_hour: number | null;
+  send_minute: number | null;
+  notification_enabled: boolean;
+  last_notified_date: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface NotificationSettings {
+  categories: string[];
+  slackWebhookUrl: string;
+  messageTemplate: string;
+  sendHour: number;
+  sendMinute: number;
+  notificationEnabled: boolean;
+}
+
+export interface NotificationSettingsResponse {
+  userId: string;
+  settings: NotificationSettings;
 }
 
 export interface DbArticle {

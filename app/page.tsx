@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import CategorySelector from "@/components/CategorySelector";
 import ResultModal from "@/components/ResultModal";
+import NotificationSettingsForm from "@/components/NotificationSettingsForm";
 import type { SelectArticleResponse } from "@/types";
 
 const USER_ID_STORAGE_KEY = "dailyinsight_user_id";
@@ -13,6 +14,16 @@ export default function HomePage() {
   const [error, setError] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [result, setResult] = useState<SelectArticleResponse | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
+
+  useEffect(() => {
+    setUserId(localStorage.getItem(USER_ID_STORAGE_KEY));
+  }, []);
+
+  const persistUserId = (id: string) => {
+    localStorage.setItem(USER_ID_STORAGE_KEY, id);
+    setUserId(id);
+  };
 
   const toggleCategory = (category: string) => {
     setSelected((prev) =>
@@ -28,11 +39,10 @@ export default function HomePage() {
     setError(null);
 
     try {
-      const userId = localStorage.getItem(USER_ID_STORAGE_KEY) ?? undefined;
       const res = await fetch("/api/articles/select", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ categories: selected, userId }),
+        body: JSON.stringify({ categories: selected, userId: userId ?? undefined }),
       });
 
       if (!res.ok) {
@@ -41,7 +51,7 @@ export default function HomePage() {
       }
 
       const data: SelectArticleResponse = await res.json();
-      localStorage.setItem(USER_ID_STORAGE_KEY, data.userId);
+      persistUserId(data.userId);
       setResult(data);
       setModalOpen(true);
     } catch (e) {
@@ -94,6 +104,15 @@ export default function HomePage() {
             {error}
           </p>
         )}
+      </section>
+
+      <section className="mx-auto max-w-[720px] px-lg pb-section">
+        <NotificationSettingsForm
+          userId={userId}
+          categories={selected}
+          onUserIdChange={persistUserId}
+          onCategoriesLoaded={setSelected}
+        />
       </section>
 
       <ResultModal

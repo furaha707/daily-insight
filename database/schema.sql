@@ -2,23 +2,42 @@
 -- [dailyInsight] Supabase 초기화 SQL
 -- Supabase 대시보드 > SQL Editor 에서 전체 복사 후 실행
 --
--- 구성: users(선택 카테고리를 저장하는 익명 사용자) / articles(추천 아티클 원본)
---       / sent_log(사용자별 발송 기록, 중복 발송 방지용)
+-- 구성: users(익명 사용자 + 관심 카테고리 + Slack 알림 설정)
+--       / articles(추천 아티클 원본) / sent_log(사용자별 발송 기록, 중복 발송 방지용)
+--
+-- 접근 모델: 클라이언트(브라우저)는 DB에 직접 접근하지 않는다.
+--   모든 읽기/쓰기는 Next.js 서버(API Route, service_role 키)를 경유한다.
+--   RLS는 활성화하되 anon 정책은 두지 않아 REST 직접 접근을 차단한다.
 -- ============================================================
 
 create extension if not exists pgcrypto;
 
 -- ------------------------------------------------------------
--- 1. users : 익명 사용자(브라우저 단위) + 관심 카테고리
+-- 1. users : 익명 사용자(브라우저 단위) + 관심 카테고리 + Slack 알림 설정
 -- ------------------------------------------------------------
 create table if not exists public.users (
-  id            uuid        default gen_random_uuid() primary key,
-  categories    text[]      not null default '{}',
-  created_at    timestamptz default now(),
-  updated_at    timestamptz default now()
+  id                    uuid        default gen_random_uuid() primary key,
+  categories            text[]      not null default '{}',
+  slack_webhook_url     text,
+  message_template      text        default '📰 오늘의 인사이트 아티클이에요!
+
+{title}
+{url}',
+  send_hour             smallint    check (send_hour between 0 and 23),
+  send_minute           smallint    check (send_minute between 0 and 59),
+  notification_enabled  boolean     not null default false,
+  last_notified_date    date,
+  created_at            timestamptz default now(),
+  updated_at            timestamptz default now()
 );
 
-comment on table public.users is '서비스를 이용하는 (로그인 없는) 익명 사용자와 선택 카테고리';
+comment on table public.users is '서비스를 이용하는 (로그인 없는) 익명 사용자, 관심 카테고리, Slack 알림 설정';
+comment on column public.users.slack_webhook_url is 'Slack Incoming Webhook URL (사용자별 개인 워크스페이스)';
+comment on column public.users.message_template is '{title}, {url}, {category} 플레이스홀더를 지원하는 발송 문구 템플릿';
+comment on column public.users.send_hour is '희망 발송 시(0-23), Asia/Seoul 기준';
+comment on column public.users.send_minute is '희망 발송 분(0-59), Asia/Seoul 기준';
+comment on column public.users.notification_enabled is '자동 발송 on/off';
+comment on column public.users.last_notified_date is '마지막으로 발송된 날짜(Asia/Seoul) - 하루 중복 발송 방지용';
 
 -- ------------------------------------------------------------
 -- 2. articles : 추천 아티클 원본 데이터 (CSV 시드)
@@ -57,29 +76,10 @@ create index if not exists sent_log_user_idx on public.sent_log (user_id);
 
 -- ------------------------------------------------------------
 -- 4. Row Level Security
---    로그인이 없는 서비스이므로 anon 롤에게 필요한 최소 권한만 부여한다.
+--    anon 정책은 의도적으로 만들지 않는다 (서버는 service_role로 접근하며,
+--    service_role은 RLS를 우회하므로 별도 정책이 필요 없다).
+--    이렇게 하면 공개된 publishable key로 REST를 직접 두드려도 아무 데이터도 노출되지 않는다.
 -- ------------------------------------------------------------
 alter table public.users     enable row level security;
 alter table public.articles  enable row level security;
 alter table public.sent_log  enable row level security;
-
--- users: 익명 사용자 본인 레코드 생성/조회/수정(카테고리 변경) 허용
-create policy "anon_insert_users" on public.users
-  for insert to anon with check (true);
-
-create policy "anon_select_users" on public.users
-  for select to anon using (true);
-
-create policy "anon_update_users" on public.users
-  for update to anon using (true) with check (true);
-
--- articles: 읽기 전용 (시드는 SQL Editor / 서비스 롤에서만 수행)
-create policy "anon_select_articles" on public.articles
-  for select to anon using (true);
-
--- sent_log: 추천 결과 기록 및 중복 체크용 조회 허용
-create policy "anon_insert_sent_log" on public.sent_log
-  for insert to anon with check (true);
-
-create policy "anon_select_sent_log" on public.sent_log
-  for select to anon using (true);
