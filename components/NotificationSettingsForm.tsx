@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import CategorySelector from "@/components/CategorySelector";
+import SlackWebhookHelpModal from "@/components/SlackWebhookHelpModal";
+import SubscribeSuccessModal from "@/components/SubscribeSuccessModal";
 import { extractSlackTeamId } from "@/lib/slack";
 import { DEFAULT_MESSAGE_TEMPLATE } from "@/lib/constants";
 
@@ -56,15 +58,15 @@ export default function NotificationSettingsForm({
     { type: "success" | "error"; message: string } | null
   >(null);
   const [origin, setOrigin] = useState("");
+  const [helpOpen, setHelpOpen] = useState(false);
+  const [successOpen, setSuccessOpen] = useState(false);
 
   useEffect(() => {
     setOrigin(window.location.origin);
   }, []);
 
   const teamId = extractSlackTeamId(webhookUrl.trim());
-  const quickLinkPreview = teamId
-    ? `${origin}/?teamId=${teamId}`
-    : "https://.../?teamId=(Webhook URL을 입력하면 채워져요)";
+  const quickLinkPreview = teamId ? `${origin}/?teamId=${teamId}` : "";
 
   const handleSave = async () => {
     if (categories.length === 0) {
@@ -96,8 +98,9 @@ export default function NotificationSettingsForm({
       onSubscribed();
       setStatus({
         type: "success",
-        message: `구독 완료! 매일 ${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}쯔음 Slack으로 보내드릴게요.`,
+        message: `매일 ${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")} 구독 설정됨`,
       });
+      setSuccessOpen(true);
     } catch (e) {
       setStatus({
         type: "error",
@@ -163,8 +166,18 @@ export default function NotificationSettingsForm({
       </div>
 
       <label className="block mb-lg">
-        <span className="block text-caption-strong text-ink mb-xxs">
-          Slack Incoming Webhook URL
+        <span className="flex items-center gap-xxs mb-xxs">
+          <span className="text-caption-strong text-ink">
+            Slack Incoming Webhook URL
+          </span>
+          <button
+            type="button"
+            onClick={() => setHelpOpen(true)}
+            aria-label="Webhook URL 발급 방법 보기"
+            className="h-4 w-4 rounded-full bg-hairline text-ink-muted-80 text-[10px] leading-4 flex items-center justify-center"
+          >
+            ?
+          </button>
         </span>
         <input
           type="url"
@@ -174,19 +187,6 @@ export default function NotificationSettingsForm({
           className="w-full rounded-md border border-hairline px-md py-sm text-caption text-ink placeholder:text-ink-muted-48 focus:border-primary"
         />
       </label>
-
-      <div className="block mb-lg">
-        <span className="block text-caption-strong text-ink mb-xxs">
-          발송 메시지 (고정)
-        </span>
-        <div className="w-full rounded-md border border-hairline bg-canvas-parchment px-md py-sm text-caption text-ink-muted-80 whitespace-pre-line">
-          {TEMPLATE_PREVIEW}
-        </div>
-        <span className="block text-fine-print text-ink-muted-48 mt-xxs">
-          이 문구는 고정이며 수정할 수 없어요. &quot;아티클 제목&quot;, &quot;아티클 url&quot; 자리에
-          실제 추천 아티클 정보가 들어가요.
-        </span>
-      </div>
 
       <label className="block mb-lg">
         <span className="block text-caption-strong text-ink mb-xxs">
@@ -208,10 +208,27 @@ export default function NotificationSettingsForm({
         <span className="block text-caption-strong text-ink mb-xxs">
           최종 발송 미리보기
         </span>
-        <div className="w-full rounded-md border border-hairline bg-canvas-parchment px-md py-sm text-caption text-ink-muted-80 whitespace-pre-line">
-          {TEMPLATE_PREVIEW}
-          {extraLinks.trim() && `\n\n${extraLinks.trim()}`}
-          {`\n\n데일리인사이트 바로가기: ${quickLinkPreview}`}
+        <div className="w-full rounded-md border border-hairline bg-canvas-parchment px-md py-sm text-caption text-ink-muted-80">
+          <p className="whitespace-pre-line">
+            {TEMPLATE_PREVIEW}
+            {extraLinks.trim() && `\n\n${extraLinks.trim()}`}
+          </p>
+          <p className="mt-sm">
+            {teamId ? (
+              <a
+                href={quickLinkPreview}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary underline"
+              >
+                데일리인사이트 바로가기
+              </a>
+            ) : (
+              <span className="text-ink-muted-48">
+                데일리인사이트 바로가기 (Webhook URL을 입력하면 링크가 활성화돼요)
+              </span>
+            )}
+          </p>
         </div>
       </div>
 
@@ -239,7 +256,6 @@ export default function NotificationSettingsForm({
             </option>
           ))}
         </select>
-        <span className="text-fine-print text-ink-muted-48">(Asia/Seoul, 10분 단위)</span>
       </div>
 
       <button
@@ -275,6 +291,14 @@ export default function NotificationSettingsForm({
           </button>
         </div>
       )}
+
+      <SlackWebhookHelpModal open={helpOpen} onClose={() => setHelpOpen(false)} />
+      <SubscribeSuccessModal
+        open={successOpen}
+        onClose={() => setSuccessOpen(false)}
+        hour={hour}
+        minute={minute}
+      />
     </div>
   );
 }

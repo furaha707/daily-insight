@@ -64,7 +64,8 @@ function fillTemplate(template: string, vars: Record<string, string>) {
 function buildQuickLinkFooter(teamId: string | null): string {
   if (!teamId || !APP_BASE_URL) return "";
   const url = `${APP_BASE_URL}/?teamId=${encodeURIComponent(teamId)}`;
-  return `\n\n데일리인사이트 바로가기: ${url}`;
+  // Slack mrkdwn 링크 문법: <url|표시할 텍스트> — "데일리인사이트 바로가기" 문구 자체가 링크가 된다.
+  return `\n\n<${url}|데일리인사이트 바로가기>`;
 }
 
 async function pickArticleFor(user: TargetUser): Promise<Article | null> {

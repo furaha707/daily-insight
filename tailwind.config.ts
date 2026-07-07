@@ -129,11 +129,29 @@ const config: Config = {
           "0%": { boxShadow: "0 0 0 0 rgba(0, 102, 204, 0.35)" },
           "100%": { boxShadow: "0 0 0 14px rgba(0, 102, 204, 0)" },
         },
+        "celebrate-pop": {
+          "0%": { opacity: "0", transform: "scale(0.3)" },
+          "60%": { opacity: "1", transform: "scale(1.15)" },
+          "100%": { opacity: "1", transform: "scale(1)" },
+        },
+        "confetti-burst": {
+          "0%": {
+            transform: "translate(0, 0) scale(1) rotate(0deg)",
+            opacity: "1",
+          },
+          "100%": {
+            transform:
+              "translate(var(--tx, 40px), var(--ty, -40px)) scale(0.4) rotate(180deg)",
+            opacity: "0",
+          },
+        },
       },
       animation: {
         "fade-in": "fade-in 0.3s ease-out",
         "scale-in": "scale-in 0.28s cubic-bezier(0.16, 1, 0.3, 1)",
         "pulse-ring": "pulse-ring 1.8s cubic-bezier(0.4, 0, 0.6, 1) infinite",
+        "celebrate-pop": "celebrate-pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)",
+        "confetti-burst": "confetti-burst 0.9s ease-out forwards",
       },
     },
   },
