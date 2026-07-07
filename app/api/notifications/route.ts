@@ -1,29 +1,36 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { extractSlackTeamId } from "@/lib/slack";
+import { DEFAULT_MESSAGE_TEMPLATE } from "@/lib/constants";
 import type {
   NotificationSettings,
   NotificationSettingsResponse,
 } from "@/types";
 
-const DEFAULT_MESSAGE_TEMPLATE = `📰 오늘의 인사이트 아티클이에요!
-
-{title}
-{url}`;
-
 export async function GET(req: NextRequest) {
   const userId = req.nextUrl.searchParams.get("userId");
+  const teamId = req.nextUrl.searchParams.get("teamId");
 
-  if (!userId) {
-    return NextResponse.json({ error: "userId가 필요합니다." }, { status: 400 });
+  if (!userId && !teamId) {
+    return NextResponse.json(
+      { error: "userId 또는 teamId가 필요합니다." },
+      { status: 400 }
+    );
   }
 
-  const { data, error } = await supabaseAdmin
+  // teamId(Slack 워크스페이스)가 진짜 identity이므로 우선 조회하고,
+  // 없으면 브라우저에 저장된 userId로 보조 조회한다.
+  let query = supabaseAdmin
     .from("users")
     .select(
-      "categories, slack_webhook_url, message_template, send_hour, send_minute, notification_enabled"
-    )
-    .eq("id", userId)
-    .maybeSingle();
+      "id, categories, slack_webhook_url, message_template, extra_links, send_hour, send_minute, notification_enabled"
+    );
+
+  query = teamId
+    ? query.eq("slack_team_id", teamId).order("created_at", { ascending: true })
+    : query.eq("id", userId as string);
+
+  const { data, error } = await query.limit(1);
 
   if (error) {
     return NextResponse.json(
@@ -32,20 +39,23 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  if (!data) {
-    return NextResponse.json({ error: "사용자를 찾을 수 없습니다." }, { status: 404 });
+  const row = data?.[0];
+
+  if (!row) {
+    return NextResponse.json({ error: "구독 정보를 찾을 수 없습니다." }, { status: 404 });
   }
 
   const settings: NotificationSettings = {
-    categories: data.categories ?? [],
-    slackWebhookUrl: data.slack_webhook_url ?? "",
-    messageTemplate: data.message_template ?? DEFAULT_MESSAGE_TEMPLATE,
-    sendHour: data.send_hour ?? 9,
-    sendMinute: data.send_minute ?? 0,
-    notificationEnabled: data.notification_enabled ?? false,
+    categories: row.categories ?? [],
+    slackWebhookUrl: row.slack_webhook_url ?? "",
+    messageTemplate: row.message_template ?? DEFAULT_MESSAGE_TEMPLATE,
+    extraLinks: row.extra_links ?? "",
+    sendHour: row.send_hour ?? 9,
+    sendMinute: row.send_minute ?? 0,
+    notificationEnabled: row.notification_enabled ?? false,
   };
 
-  const response: NotificationSettingsResponse = { userId, settings };
+  const response: NotificationSettingsResponse = { userId: row.id, settings };
   return NextResponse.json(response);
 }
 
@@ -54,10 +64,9 @@ export async function PUT(req: NextRequest) {
   const incomingUserId: string | undefined = body?.userId;
   const categories: string[] | undefined = body?.categories;
   const slackWebhookUrl: string = (body?.slackWebhookUrl ?? "").trim();
-  const messageTemplate: string = (body?.messageTemplate ?? "").trim();
+  const extraLinks: string = (body?.extraLinks ?? "").trim();
   const sendHour: number | undefined = body?.sendHour;
   const sendMinute: number | undefined = body?.sendMinute;
-  const notificationEnabled: boolean = Boolean(body?.notificationEnabled);
 
   if (!categories || categories.length === 0) {
     return NextResponse.json(
@@ -66,55 +75,71 @@ export async function PUT(req: NextRequest) {
     );
   }
 
-  if (notificationEnabled) {
-    if (!slackWebhookUrl.startsWith("https://hooks.slack.com/")) {
-      return NextResponse.json(
-        { error: "올바른 Slack Incoming Webhook URL을 입력해주세요." },
-        { status: 400 }
-      );
-    }
-    if (!messageTemplate) {
-      return NextResponse.json(
-        { error: "발송 메시지 템플릿을 입력해주세요." },
-        { status: 400 }
-      );
-    }
-    if (
-      typeof sendHour !== "number" ||
-      sendHour < 0 ||
-      sendHour > 23 ||
-      typeof sendMinute !== "number" ||
-      sendMinute < 0 ||
-      sendMinute > 59
-    ) {
-      return NextResponse.json(
-        { error: "발송 시각을 올바르게 입력해주세요." },
-        { status: 400 }
-      );
-    }
+  const slackTeamId = slackWebhookUrl ? extractSlackTeamId(slackWebhookUrl) : null;
+
+  // 이 엔드포인트를 통한 저장은 항상 "구독하기"를 의미한다 (on/off 토글 없음).
+  // 구독을 끄는 것은 오직 Slack 메시지의 구독 해지 링크(/api/unsubscribe)로만 가능하다.
+  if (!slackTeamId) {
+    return NextResponse.json(
+      { error: "올바른 Slack Incoming Webhook URL을 입력해주세요." },
+      { status: 400 }
+    );
+  }
+  if (
+    typeof sendHour !== "number" ||
+    sendHour < 0 ||
+    sendHour > 23 ||
+    typeof sendMinute !== "number" ||
+    sendMinute < 0 ||
+    sendMinute > 59
+  ) {
+    return NextResponse.json(
+      { error: "발송 시각을 올바르게 입력해주세요." },
+      { status: 400 }
+    );
   }
 
   const payload = {
     categories,
     slack_webhook_url: slackWebhookUrl || null,
-    message_template: messageTemplate || DEFAULT_MESSAGE_TEMPLATE,
-    send_hour: sendHour ?? null,
-    send_minute: sendMinute ?? null,
-    notification_enabled: notificationEnabled,
+    slack_team_id: slackTeamId,
+    // 발송 문구는 고정이며 클라이언트 입력값을 받지 않는다.
+    message_template: DEFAULT_MESSAGE_TEMPLATE,
+    extra_links: extraLinks || null,
+    send_hour: sendHour,
+    send_minute: sendMinute,
+    notification_enabled: true,
     updated_at: new Date().toISOString(),
   };
 
-  let userId = incomingUserId ?? null;
+  let userId: string | null = null;
 
-  if (userId) {
+  // 진짜 identity는 Slack 워크스페이스다 (브라우저는 그냥 로컬 캐시일 뿐).
+  // 워크스페이스 ID가 있으면 브라우저가 뭘 들고 있든 무조건 그 구독을 찾아서 쓴다.
+  if (slackTeamId) {
+    const { data: existingByTeam } = await supabaseAdmin
+      .from("users")
+      .select("id")
+      .eq("slack_team_id", slackTeamId)
+      .order("created_at", { ascending: true })
+      .limit(1);
+
+    if (existingByTeam && existingByTeam.length > 0) {
+      userId = existingByTeam[0].id;
+    }
+  }
+
+  // 아직 Slack 웹훅을 등록하지 않은 상태(예: 카테고리만 고르고 즉시추천만 쓰던 경우)라면
+  // 브라우저에 저장된 userId를 이어서 쓴다.
+  if (!userId && incomingUserId) {
     const { data: existing } = await supabaseAdmin
       .from("users")
       .select("id")
-      .eq("id", userId)
+      .eq("id", incomingUserId)
       .maybeSingle();
 
-    if (!existing) {
-      userId = null;
+    if (existing) {
+      userId = incomingUserId;
     }
   }
 
@@ -159,9 +184,10 @@ export async function PUT(req: NextRequest) {
       categories,
       slackWebhookUrl,
       messageTemplate: payload.message_template,
-      sendHour: sendHour ?? 9,
-      sendMinute: sendMinute ?? 0,
-      notificationEnabled,
+      extraLinks,
+      sendHour,
+      sendMinute,
+      notificationEnabled: true,
     },
   };
   return NextResponse.json(response);

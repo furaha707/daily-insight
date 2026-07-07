@@ -11,6 +11,11 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+// 배포된 Next.js 앱의 주소. 메시지 하단 "바로가기" 링크를 만들 때 사용한다.
+// supabase secrets set APP_BASE_URL=https://your-domain.com 로 설정할 것.
+const APP_BASE_URL = Deno.env.get("APP_BASE_URL") ?? "";
+// 발송 문구는 고정이며 사용자가 수정할 수 없다. users.message_template이 비어있을 때의 안전망.
+const DEFAULT_TEMPLATE = "📰 오늘의 인사이트 아티클이에요!\n\n{title}\n{url}";
 
 const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 
@@ -18,7 +23,9 @@ interface TargetUser {
   id: string;
   categories: string[] | null;
   slack_webhook_url: string | null;
+  slack_team_id: string | null;
   message_template: string | null;
+  extra_links: string | null;
   last_notified_date: string | null;
 }
 
@@ -52,6 +59,14 @@ function fillTemplate(template: string, vars: Record<string, string>) {
   return template.replace(/\{(title|url|category)\}/g, (_match, key: string) => vars[key] ?? "");
 }
 
+// 사이트 바로가기 링크는 메시지 템플릿(사용자 입력)과 무관하게 항상 서버가 강제로 붙인다.
+// 구독 해지는 여기서 하지 않는다 — 오직 폼 내부의 "구독 해지하기" 버튼으로만 가능하다.
+function buildQuickLinkFooter(teamId: string | null): string {
+  if (!teamId || !APP_BASE_URL) return "";
+  const url = `${APP_BASE_URL}/?teamId=${encodeURIComponent(teamId)}`;
+  return `\n\n데일리인사이트 바로가기: ${url}`;
+}
+
 async function pickArticleFor(user: TargetUser): Promise<Article | null> {
   const { data: sentRows } = await supabase
     .from("sent_log")
@@ -82,7 +97,7 @@ Deno.serve(async () => {
   const { data: users, error: usersError } = await supabase
     .from("users")
     .select(
-      "id, categories, slack_webhook_url, message_template, last_notified_date"
+      "id, categories, slack_webhook_url, slack_team_id, message_template, extra_links, last_notified_date"
     )
     .eq("notification_enabled", true)
     .eq("send_hour", hour)
@@ -111,19 +126,26 @@ Deno.serve(async () => {
         continue;
       }
 
-      const message = fillTemplate(
-        user.message_template ?? "{title}\n{url}",
-        {
+      const extra = user.extra_links?.trim();
+      const message =
+        fillTemplate(user.message_template ?? DEFAULT_TEMPLATE, {
           title: picked.title,
           url: picked.url,
           category: picked.categories.join(", "),
-        }
-      );
+        }) +
+        (extra ? `\n\n${extra}` : "") +
+        buildQuickLinkFooter(user.slack_team_id);
 
       const slackRes = await fetch(user.slack_webhook_url as string, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: message }),
+        // unfurl_links/unfurl_media: false — Slack이 메시지 내 링크를 미리보기
+        // 생성을 위해 자동으로 미리 열어보는 것을 막는다 (불필요한 트래픽 방지).
+        body: JSON.stringify({
+          text: message,
+          unfurl_links: false,
+          unfurl_media: false,
+        }),
       });
 
       if (!slackRes.ok) {

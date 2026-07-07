@@ -1,14 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import CategorySelector from "@/components/CategorySelector";
+import { Suspense, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import ResultModal from "@/components/ResultModal";
 import NotificationSettingsForm from "@/components/NotificationSettingsForm";
-import type { SelectArticleResponse } from "@/types";
+import { USER_ID_STORAGE_KEY } from "@/lib/constants";
+import type { NotificationSettings, SelectArticleResponse } from "@/types";
 
-const USER_ID_STORAGE_KEY = "dailyinsight_user_id";
+function HomePageContent() {
+  const searchParams = useSearchParams();
 
-export default function HomePage() {
   const [selected, setSelected] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -16,8 +17,50 @@ export default function HomePage() {
   const [result, setResult] = useState<SelectArticleResponse | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
 
+  const [webhookUrl, setWebhookUrl] = useState("");
+  const [extraLinks, setExtraLinks] = useState("");
+  const [hour, setHour] = useState(9);
+  const [minute, setMinute] = useState(0);
+  const [checkingSubscription, setCheckingSubscription] = useState(true);
+  const [isSubscribed, setIsSubscribed] = useState(false);
+
   useEffect(() => {
-    setUserId(localStorage.getItem(USER_ID_STORAGE_KEY));
+    // 페이지에 들어올 때마다 신원을 판별한다: teamId(URL, 예: 구독해지 후 리다이렉트) 우선,
+    // 없으면 브라우저에 저장된 userId로 보조 판별한다.
+    const teamIdFromUrl = searchParams.get("teamId");
+    const localUserId = localStorage.getItem(USER_ID_STORAGE_KEY);
+
+    const query = teamIdFromUrl
+      ? `teamId=${encodeURIComponent(teamIdFromUrl)}`
+      : localUserId
+        ? `userId=${encodeURIComponent(localUserId)}`
+        : null;
+
+    if (!query) {
+      setUserId(localUserId);
+      setCheckingSubscription(false);
+      return;
+    }
+
+    fetch(`/api/notifications?${query}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!data?.settings) return;
+        const s: NotificationSettings = data.settings;
+        setSelected(s.categories);
+        setWebhookUrl(s.slackWebhookUrl);
+        setExtraLinks(s.extraLinks);
+        setHour(s.sendHour);
+        setMinute(s.sendMinute);
+        setIsSubscribed(s.notificationEnabled);
+        if (data.userId) {
+          localStorage.setItem(USER_ID_STORAGE_KEY, data.userId);
+          setUserId(data.userId);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setCheckingSubscription(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const persistUserId = (id: string) => {
@@ -65,39 +108,15 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen bg-canvas-parchment">
-      <section className="mx-auto max-w-[720px] px-lg pt-[64px] pb-section text-center">
+      <section className="mx-auto max-w-[820px] px-lg pt-[64px] pb-xxl text-center">
         <h1 className="text-display-lg sm:text-hero-display text-ink mb-lg">
           새로운 인사이트를 얻을 수 있는
           <br />
           아티클을 선정해드려요
         </h1>
-        <p className="text-lead text-ink-muted-80 mb-xxl">
+        <p className="text-lead text-ink-muted-80">
           관심가는 카테고리를 선택해주세요
         </p>
-
-        <CategorySelector selected={selected} onToggle={toggleCategory} />
-
-        <div className="mt-xxl relative inline-block">
-          {selected.length > 0 && !loading && (
-            <span
-              aria-hidden
-              className="absolute inset-0 rounded-pill animate-pulse-ring pointer-events-none"
-            />
-          )}
-          <button
-            type="button"
-            onClick={handleSubmit}
-            disabled={selected.length === 0 || loading}
-            className={[
-              "relative rounded-pill px-xl py-sm text-body transition-transform active:scale-95",
-              selected.length === 0 || loading
-                ? "bg-ink-muted-48 text-white cursor-not-allowed"
-                : "bg-primary text-white",
-            ].join(" ")}
-          >
-            {loading ? "선정 중..." : "신청하기"}
-          </button>
-        </div>
 
         {error && (
           <p className="mt-lg text-caption text-red-500" role="alert">
@@ -110,8 +129,20 @@ export default function HomePage() {
         <NotificationSettingsForm
           userId={userId}
           categories={selected}
+          onToggleCategory={toggleCategory}
           onUserIdChange={persistUserId}
-          onCategoriesLoaded={setSelected}
+          webhookUrl={webhookUrl}
+          onWebhookUrlChange={setWebhookUrl}
+          extraLinks={extraLinks}
+          onExtraLinksChange={setExtraLinks}
+          hour={hour}
+          onHourChange={setHour}
+          minute={minute}
+          onMinuteChange={setMinute}
+          checkingSubscription={checkingSubscription}
+          isSubscribed={isSubscribed}
+          onSubscribed={() => setIsSubscribed(true)}
+          onUnsubscribed={() => setIsSubscribed(false)}
         />
       </section>
 
@@ -121,5 +152,13 @@ export default function HomePage() {
         result={result}
       />
     </div>
+  );
+}
+
+export default function HomePage() {
+  return (
+    <Suspense fallback={null}>
+      <HomePageContent />
+    </Suspense>
   );
 }

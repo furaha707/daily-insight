@@ -19,6 +19,7 @@ create table if not exists public.users (
   id                    uuid        default gen_random_uuid() primary key,
   categories            text[]      not null default '{}',
   slack_webhook_url     text,
+  slack_team_id         text,
   message_template      text        default '📰 오늘의 인사이트 아티클이에요!
 
 {title}
@@ -27,17 +28,22 @@ create table if not exists public.users (
   send_minute           smallint    check (send_minute between 0 and 59),
   notification_enabled  boolean     not null default false,
   last_notified_date    date,
+  extra_links           text,
   created_at            timestamptz default now(),
   updated_at            timestamptz default now()
 );
 
 comment on table public.users is '서비스를 이용하는 (로그인 없는) 익명 사용자, 관심 카테고리, Slack 알림 설정';
 comment on column public.users.slack_webhook_url is 'Slack Incoming Webhook URL (사용자별 개인 워크스페이스)';
+comment on column public.users.slack_team_id is 'Webhook URL에서 서버가 자동 추출한 워크스페이스(Team) ID. 사용자 입력 아님. 구독 해지 링크 식별자로 사용.';
 comment on column public.users.message_template is '{title}, {url}, {category} 플레이스홀더를 지원하는 발송 문구 템플릿';
 comment on column public.users.send_hour is '희망 발송 시(0-23), Asia/Seoul 기준';
 comment on column public.users.send_minute is '희망 발송 분(0-59), Asia/Seoul 기준';
 comment on column public.users.notification_enabled is '자동 발송 on/off';
 comment on column public.users.last_notified_date is '마지막으로 발송된 날짜(Asia/Seoul) - 하루 중복 발송 방지용';
+comment on column public.users.extra_links is '아티클 외에 사용자가 매일 메시지에 함께 포함하고 싶은 추가 링크/메모 (자유 입력)';
+
+create index if not exists users_slack_team_id_idx on public.users (slack_team_id);
 
 -- ------------------------------------------------------------
 -- 2. articles : 추천 아티클 원본 데이터 (CSV 시드)
