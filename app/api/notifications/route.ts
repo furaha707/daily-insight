@@ -1,11 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { extractSlackTeamId } from "@/lib/slack";
-import { DEFAULT_MESSAGE_TEMPLATE } from "@/lib/constants";
+import { DEFAULT_MESSAGE_TEMPLATE, DEFAULT_SEND_WEEKDAYS } from "@/lib/constants";
 import type {
   NotificationSettings,
   NotificationSettingsResponse,
 } from "@/types";
+
+// 구독 해지 여부와 무관하게 sent_log는 지우지 않으므로, 누적 발송 횟수는 항상 그대로 유지된다.
+async function getSentCount(userId: string): Promise<number> {
+  const { count } = await supabaseAdmin
+    .from("sent_log")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", userId);
+  return count ?? 0;
+}
 
 export async function GET(req: NextRequest) {
   const userId = req.nextUrl.searchParams.get("userId");
@@ -23,7 +32,7 @@ export async function GET(req: NextRequest) {
   let query = supabaseAdmin
     .from("users")
     .select(
-      "id, categories, slack_webhook_url, message_template, extra_links, send_hour, send_minute, notification_enabled"
+      "id, categories, slack_webhook_url, message_template, extra_links, send_hour, send_minute, send_weekdays, notification_enabled"
     );
 
   query = teamId
@@ -52,7 +61,12 @@ export async function GET(req: NextRequest) {
     extraLinks: row.extra_links ?? "",
     sendHour: row.send_hour ?? 9,
     sendMinute: row.send_minute ?? 0,
+    sendWeekdays:
+      row.send_weekdays && row.send_weekdays.length > 0
+        ? row.send_weekdays
+        : DEFAULT_SEND_WEEKDAYS,
     notificationEnabled: row.notification_enabled ?? false,
+    sentCount: await getSentCount(row.id),
   };
 
   const response: NotificationSettingsResponse = { userId: row.id, settings };
@@ -67,6 +81,7 @@ export async function PUT(req: NextRequest) {
   const extraLinks: string = (body?.extraLinks ?? "").trim();
   const sendHour: number | undefined = body?.sendHour;
   const sendMinute: number | undefined = body?.sendMinute;
+  const sendWeekdays: number[] | undefined = body?.sendWeekdays;
 
   if (!categories || categories.length === 0) {
     return NextResponse.json(
@@ -98,6 +113,16 @@ export async function PUT(req: NextRequest) {
       { status: 400 }
     );
   }
+  if (
+    !Array.isArray(sendWeekdays) ||
+    sendWeekdays.length === 0 ||
+    !sendWeekdays.every((d) => Number.isInteger(d) && d >= 1 && d <= 5)
+  ) {
+    return NextResponse.json(
+      { error: "발송 요일을 하나 이상 선택해주세요." },
+      { status: 400 }
+    );
+  }
 
   const payload = {
     categories,
@@ -108,6 +133,7 @@ export async function PUT(req: NextRequest) {
     extra_links: extraLinks || null,
     send_hour: sendHour,
     send_minute: sendMinute,
+    send_weekdays: sendWeekdays,
     notification_enabled: true,
     updated_at: new Date().toISOString(),
   };
@@ -187,7 +213,9 @@ export async function PUT(req: NextRequest) {
       extraLinks,
       sendHour,
       sendMinute,
+      sendWeekdays,
       notificationEnabled: true,
+      sentCount: await getSentCount(userId),
     },
   };
   return NextResponse.json(response);

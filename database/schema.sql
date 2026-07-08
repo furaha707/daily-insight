@@ -26,6 +26,7 @@ create table if not exists public.users (
 {url}',
   send_hour             smallint    check (send_hour between 0 and 23),
   send_minute           smallint    check (send_minute between 0 and 59),
+  send_weekdays         smallint[]  not null default '{1,2,3,4,5}',
   notification_enabled  boolean     not null default false,
   last_notified_date    date,
   extra_links           text,
@@ -39,6 +40,7 @@ comment on column public.users.slack_team_id is 'Webhook URL에서 서버가 자
 comment on column public.users.message_template is '{title}, {url}, {category} 플레이스홀더를 지원하는 발송 문구 템플릿';
 comment on column public.users.send_hour is '희망 발송 시(0-23), Asia/Seoul 기준';
 comment on column public.users.send_minute is '희망 발송 분(0-59), Asia/Seoul 기준';
+comment on column public.users.send_weekdays is '희망 발송 요일. ISO 요일 번호(1=월 ~ 5=금), Asia/Seoul 기준';
 comment on column public.users.notification_enabled is '자동 발송 on/off';
 comment on column public.users.last_notified_date is '마지막으로 발송된 날짜(Asia/Seoul) - 하루 중복 발송 방지용';
 comment on column public.users.extra_links is '아티클 외에 사용자가 매일 메시지에 함께 포함하고 싶은 추가 링크/메모 (자유 입력)';
@@ -81,11 +83,29 @@ comment on table public.sent_log is '사용자별 아티클 발송 기록. (user
 create index if not exists sent_log_user_idx on public.sent_log (user_id);
 
 -- ------------------------------------------------------------
--- 4. Row Level Security
+-- 4. unsubscribe_feedback : 구독 해지 사유 설문 응답 기록
+-- ------------------------------------------------------------
+create table if not exists public.unsubscribe_feedback (
+  id            uuid        default gen_random_uuid() primary key,
+  user_id       uuid        not null references public.users(id) on delete cascade,
+  reason        text        not null,
+  custom_reason text,
+  created_at    timestamptz default now()
+);
+
+comment on table public.unsubscribe_feedback is '구독 해지 시 받은 사유 설문 응답. 해지해도 삭제하지 않고 계속 쌓는다.';
+comment on column public.unsubscribe_feedback.reason is '선택한 사유 문구 ("기타" 포함)';
+comment on column public.unsubscribe_feedback.custom_reason is '사유로 "기타"를 선택했을 때의 자유 입력 텍스트';
+
+create index if not exists unsubscribe_feedback_user_idx on public.unsubscribe_feedback (user_id);
+
+-- ------------------------------------------------------------
+-- 5. Row Level Security
 --    anon 정책은 의도적으로 만들지 않는다 (서버는 service_role로 접근하며,
 --    service_role은 RLS를 우회하므로 별도 정책이 필요 없다).
 --    이렇게 하면 공개된 publishable key로 REST를 직접 두드려도 아무 데이터도 노출되지 않는다.
 -- ------------------------------------------------------------
-alter table public.users     enable row level security;
-alter table public.articles  enable row level security;
-alter table public.sent_log  enable row level security;
+alter table public.users                 enable row level security;
+alter table public.articles              enable row level security;
+alter table public.sent_log              enable row level security;
+alter table public.unsubscribe_feedback  enable row level security;

@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 
-const inter = Inter({
-  subsets: ["latin"],
-  variable: "--font-inter",
+// Blacksword by Youssef Habchi — 개인 용도 무료 라이선스(상업적 사용 시 별도 라이선스 필요).
+// https://www.dafont.com/blacksword.font
+const blacksword = localFont({
+  src: "./fonts/Blacksword.otf",
+  variable: "--font-blacksword",
   display: "swap",
 });
 
@@ -20,14 +22,25 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="ko" className={inter.variable}>
+    <html lang="ko" className={blacksword.variable}>
+      <head>
+        <link
+          rel="stylesheet"
+          as="style"
+          crossOrigin="anonymous"
+          href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css"
+        />
+      </head>
       <body className="antialiased">
-        <header className="fixed top-0 left-0 right-0 z-40 h-11 bg-surface-black flex items-center justify-center">
-          <span className="text-body-on-dark text-[13px] font-semibold tracking-tight">
+        <header className="fixed top-0 left-0 right-0 z-40 h-16 bg-canvas border-b border-border flex items-center justify-center">
+          <span
+            className="text-[24px] tracking-wide text-primary"
+            style={{ fontFamily: "var(--font-blacksword)" }}
+          >
             dailyInsight
           </span>
         </header>
-        <main className="pt-11">{children}</main>
+        <main className="pt-16">{children}</main>
       </body>
     </html>
   );

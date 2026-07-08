@@ -1,13 +1,16 @@
 "use client";
 
+import { formatWeekdaysLabel } from "@/lib/constants";
+
 interface SubscribeSuccessModalProps {
   open: boolean;
   onClose: () => void;
   hour: number;
   minute: number;
+  weekdays: number[];
 }
 
-const CONFETTI_COLORS = ["#0066cc", "#2997ff", "#ffb800", "#ff5f5f", "#34c759"];
+const CONFETTI_COLORS = ["#C2522D", "#D4A574", "#4B7A51", "#A8421F", "#8C6E4A"];
 
 const CONFETTI = Array.from({ length: 10 }, (_, i) => {
   const angle = (i / 10) * Math.PI * 2;
@@ -25,10 +28,12 @@ export default function SubscribeSuccessModal({
   onClose,
   hour,
   minute,
+  weekdays,
 }: SubscribeSuccessModalProps) {
   if (!open) return null;
 
   const time = `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+  const weekdaysLabel = formatWeekdaysLabel(weekdays);
 
   return (
     <div
@@ -38,7 +43,7 @@ export default function SubscribeSuccessModal({
       onClick={onClose}
     >
       <div
-        className="w-full max-w-[360px] rounded-lg bg-canvas px-xl py-xxl text-center animate-scale-in"
+        className="w-full max-w-[360px] rounded-lg bg-canvas shadow-elevated px-xl py-xxl text-center animate-scale-in"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="relative h-16 w-16 mx-auto mb-lg">
@@ -57,20 +62,20 @@ export default function SubscribeSuccessModal({
               }
             />
           ))}
-          <div className="relative h-16 w-16 rounded-full bg-primary flex items-center justify-center animate-celebrate-pop">
-            <span className="text-white text-[28px] leading-none">✓</span>
+          <div className="relative h-16 w-16 rounded-full bg-success flex items-center justify-center animate-celebrate-pop">
+            <span className="text-on-primary text-[28px] leading-none">✓</span>
           </div>
         </div>
 
-        <h2 className="text-display-md text-ink mb-xxs">구독 완료!</h2>
-        <p className="text-body text-ink-muted-80 mb-lg">
-          매일 {time}에 Slack으로 보내드릴게요.
+        <h2 className="text-title-lg text-ink mb-xxs">구독 완료!</h2>
+        <p className="text-body-sm text-ink-muted mb-lg">
+          {weekdaysLabel} {time}에 Slack으로 보내드릴게요.
         </p>
 
         <button
           type="button"
           onClick={onClose}
-          className="w-full rounded-pill bg-primary text-white py-sm text-body active:scale-95 transition-transform"
+          className="w-full h-11 rounded-md bg-primary text-on-primary text-button active:bg-primary-hover active:scale-[0.98] transition-colors duration-fast ease-brand"
         >
           확인
         </button>

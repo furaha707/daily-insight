@@ -5,116 +5,105 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        primary: "#0066cc",
-        "primary-focus": "#0071e3",
-        "primary-on-dark": "#2997ff",
-        canvas: "#ffffff",
-        "canvas-parchment": "#f5f5f7",
-        "surface-pearl": "#fafafc",
-        "surface-tile-1": "#272729",
-        "surface-tile-2": "#2a2a2c",
-        "surface-tile-3": "#252527",
-        "surface-black": "#000000",
-        "surface-chip": "rgba(210, 210, 215, 0.64)",
-        ink: "#1d1d1f",
-        "ink-muted-80": "#333333",
-        "ink-muted-48": "#7a7a7a",
-        "body-on-dark": "#ffffff",
-        "body-muted": "#cccccc",
-        "divider-soft": "#f0f0f0",
-        hairline: "#e0e0e0",
+        // 다크모드 요청에 따라 원 가이드(라이트, 파치먼트 캔버스)를 다크 warm-neutral 팔레트로 반전.
+        // 메인 컬러(terracotta)는 더 적극적으로 쓰기 위해 다크 배경에서도 선명하도록 살짝 밝게 조정.
+        primary: "#E0693C",
+        "on-primary": "#ffffff",
+        "primary-hover": "#F0794C",
+        ink: "#F5EFE7",
+        "ink-muted": "#C9BDB0",
+        canvas: "#1B1613",
+        "surface-1": "#241D19",
+        "surface-2": "#2E2620",
+        border: "#463B33",
+        "accent-warm": "#D9A468",
+        "code-bg": "#221B17",
+        success: "#7CB37F",
+        error: "#E2685C",
       },
       fontFamily: {
+        // Styrene A/B는 라이선스 폰트라 웹에 없음 — 요청에 따라 Pretendard(CDN)를 전역 서체로 사용.
         display: [
-          "SF Pro Display",
-          "Inter",
-          "system-ui",
+          "Pretendard",
           "-apple-system",
+          "BlinkMacSystemFont",
+          "system-ui",
+          "Roboto",
           "sans-serif",
         ],
         text: [
-          "SF Pro Text",
-          "Inter",
-          "system-ui",
+          "Pretendard",
           "-apple-system",
+          "BlinkMacSystemFont",
+          "system-ui",
+          "Roboto",
           "sans-serif",
         ],
       },
       fontSize: {
-        "hero-display": [
-          "56px",
-          { lineHeight: "1.07", letterSpacing: "-0.28px", fontWeight: "600" },
+        display: [
+          "52px",
+          { lineHeight: "1.08", letterSpacing: "-0.03em", fontWeight: "500" },
         ],
-        "display-lg": [
-          "40px",
-          { lineHeight: "1.10", letterSpacing: "0", fontWeight: "600" },
-        ],
-        "display-md": [
-          "34px",
-          { lineHeight: "1.47", letterSpacing: "-0.374px", fontWeight: "600" },
-        ],
-        lead: [
+        "title-lg": [
           "28px",
-          { lineHeight: "1.14", letterSpacing: "0.196px", fontWeight: "400" },
+          { lineHeight: "1.2", letterSpacing: "-0.02em", fontWeight: "500" },
         ],
-        "lead-airy": [
-          "24px",
-          { lineHeight: "1.5", letterSpacing: "0", fontWeight: "300" },
+        "title-md": [
+          "20px",
+          { lineHeight: "1.3", letterSpacing: "-0.015em", fontWeight: "500" },
         ],
-        tagline: [
-          "21px",
-          { lineHeight: "1.19", letterSpacing: "0.231px", fontWeight: "600" },
-        ],
-        "body-strong": [
-          "17px",
-          { lineHeight: "1.24", letterSpacing: "-0.374px", fontWeight: "600" },
+        "title-sm": [
+          "16px",
+          { lineHeight: "1.4", letterSpacing: "-0.01em", fontWeight: "500" },
         ],
         body: [
           "17px",
-          { lineHeight: "1.47", letterSpacing: "-0.374px", fontWeight: "400" },
+          { lineHeight: "1.65", letterSpacing: "-0.01em", fontWeight: "400" },
+        ],
+        "body-sm": [
+          "14px",
+          { lineHeight: "1.6", letterSpacing: "-0.005em", fontWeight: "400" },
         ],
         caption: [
-          "14px",
-          { lineHeight: "1.43", letterSpacing: "-0.224px", fontWeight: "400" },
-        ],
-        "caption-strong": [
-          "14px",
-          { lineHeight: "1.29", letterSpacing: "-0.224px", fontWeight: "600" },
-        ],
-        "button-large": [
-          "18px",
-          { lineHeight: "1.0", letterSpacing: "0", fontWeight: "300" },
-        ],
-        "button-utility": [
-          "14px",
-          { lineHeight: "1.29", letterSpacing: "-0.224px", fontWeight: "400" },
+          "13px",
+          { lineHeight: "1.5", letterSpacing: "0", fontWeight: "400" },
         ],
         "fine-print": [
           "12px",
-          { lineHeight: "1.0", letterSpacing: "-0.12px", fontWeight: "400" },
+          { lineHeight: "1.4", letterSpacing: "0", fontWeight: "400" },
+        ],
+        button: [
+          "15px",
+          { lineHeight: "1.0", letterSpacing: "0", fontWeight: "500" },
         ],
       },
       spacing: {
         xxs: "4px",
         xs: "8px",
         sm: "12px",
-        md: "17px",
+        md: "16px",
         lg: "24px",
         xl: "32px",
         xxl: "48px",
-        section: "80px",
+        section: "96px",
       },
       borderRadius: {
-        none: "0px",
-        xs: "5px",
-        sm: "8px",
-        md: "11px",
-        lg: "18px",
+        sm: "4px",
+        md: "8px",
+        lg: "16px",
         pill: "9999px",
       },
       boxShadow: {
-        product: "3px 5px 30px 0 rgba(0, 0, 0, 0.22)",
-        none: "none",
+        card: "0 1px 2px rgba(26, 26, 24, 0.06)",
+        elevated: "0 4px 24px rgba(26, 26, 24, 0.08)",
+      },
+      transitionDuration: {
+        fast: "120ms",
+        base: "240ms",
+      },
+      transitionTimingFunction: {
+        brand: "cubic-bezier(0.4, 0, 0.2, 1)",
       },
       keyframes: {
         "fade-in": {
@@ -126,8 +115,8 @@ const config: Config = {
           "100%": { opacity: "1", transform: "scale(1)" },
         },
         "pulse-ring": {
-          "0%": { boxShadow: "0 0 0 0 rgba(0, 102, 204, 0.35)" },
-          "100%": { boxShadow: "0 0 0 14px rgba(0, 102, 204, 0)" },
+          "0%": { boxShadow: "0 0 0 0 rgba(224, 105, 60, 0.35)" },
+          "100%": { boxShadow: "0 0 0 14px rgba(224, 105, 60, 0)" },
         },
         "celebrate-pop": {
           "0%": { opacity: "0", transform: "scale(0.3)" },

@@ -6,6 +6,7 @@ export interface DbUser {
   message_template: string | null;
   send_hour: number | null;
   send_minute: number | null;
+  send_weekdays: number[] | null;
   notification_enabled: boolean;
   last_notified_date: string | null;
   extra_links: string | null;
@@ -20,7 +21,9 @@ export interface NotificationSettings {
   extraLinks: string;
   sendHour: number;
   sendMinute: number;
+  sendWeekdays: number[];
   notificationEnabled: boolean;
+  sentCount: number;
 }
 
 export interface NotificationSettingsResponse {

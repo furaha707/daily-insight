@@ -26,6 +26,7 @@ interface TargetUser {
   slack_team_id: string | null;
   message_template: string | null;
   extra_links: string | null;
+  send_weekdays: number[] | null;
   last_notified_date: string | null;
 }
 
@@ -48,10 +49,17 @@ function nowInSeoul() {
   }).formatToParts(new Date());
 
   const get = (type: string) => parts.find((p) => p.type === type)?.value ?? "";
+  const date = `${get("year")}-${get("month")}-${get("day")}`;
+  // 위 date는 이미 Asia/Seoul 기준 달력 날짜이므로, UTC 자정으로 파싱해도
+  // 실행 환경의 타임존과 무관하게 항상 같은 요일이 나온다.
+  const utcDay = new Date(`${date}T00:00:00Z`).getUTCDay(); // 0=일 ~ 6=토
+  const isoWeekday = utcDay === 0 ? 7 : utcDay; // 1=월 ~ 7=일
+
   return {
-    date: `${get("year")}-${get("month")}-${get("day")}`,
+    date,
     hour: Number(get("hour")),
     minute: Number(get("minute")),
+    isoWeekday,
   };
 }
 
@@ -92,17 +100,18 @@ async function pickArticleFor(user: TargetUser): Promise<Article | null> {
 }
 
 Deno.serve(async () => {
-  const { date, hour, minute } = nowInSeoul();
+  const { date, hour, minute, isoWeekday } = nowInSeoul();
   const bucketMinute = Math.floor(minute / 10) * 10;
 
   const { data: users, error: usersError } = await supabase
     .from("users")
     .select(
-      "id, categories, slack_webhook_url, slack_team_id, message_template, extra_links, last_notified_date"
+      "id, categories, slack_webhook_url, slack_team_id, message_template, extra_links, send_weekdays, last_notified_date"
     )
     .eq("notification_enabled", true)
     .eq("send_hour", hour)
     .eq("send_minute", bucketMinute)
+    .contains("send_weekdays", [isoWeekday])
     .not("slack_webhook_url", "is", null);
 
   if (usersError) {
@@ -112,8 +121,11 @@ Deno.serve(async () => {
     });
   }
 
+  // 쿼리에서 이미 요일을 걸렀지만, 오발송을 막기 위해 요일 + 발송 이력을 다시 한번 확인한다.
   const targets = ((users ?? []) as TargetUser[]).filter(
-    (u) => u.last_notified_date !== date
+    (u) =>
+      (u.send_weekdays ?? [1, 2, 3, 4, 5]).includes(isoWeekday) &&
+      u.last_notified_date !== date
   );
 
   const results: Array<Record<string, unknown>> = [];

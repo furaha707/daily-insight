@@ -32,23 +32,23 @@ export default function ResultModal({ open, onClose, result }: ResultModalProps)
       onClick={onClose}
     >
       <div
-        className="w-full max-w-[420px] rounded-lg bg-canvas px-xl py-xxl text-center animate-scale-in"
+        className="w-full max-w-[420px] rounded-lg bg-canvas shadow-elevated px-xl py-xxl text-center animate-scale-in"
         onClick={(e) => e.stopPropagation()}
       >
         {article ? (
           <>
-            <p className="text-caption-strong text-primary mb-xs">신청 완료 ✅</p>
-            <h2 className="text-display-md text-ink mb-lg">
+            <p className="text-caption text-success mb-xs">신청 완료 ✅</p>
+            <h2 className="text-title-lg text-ink mb-lg">
               이 아티클을 추천드려요
             </h2>
 
-            <div className="rounded-md border border-hairline bg-surface-pearl p-lg text-left mb-lg">
-              <p className="text-body-strong text-ink mb-sm">{article.title}</p>
+            <div className="rounded-md bg-surface-2 p-lg text-left mb-lg">
+              <p className="text-title-sm text-ink mb-sm">{article.title}</p>
               <div className="flex flex-wrap gap-xxs mb-sm">
                 {article.categories.map((c) => (
                   <span
                     key={c}
-                    className="rounded-pill bg-canvas-parchment px-sm py-xxs text-fine-print text-ink-muted-80"
+                    className="rounded-pill bg-surface-1 px-sm py-xxs text-fine-print text-ink-muted"
                   >
                     {c}
                   </span>
@@ -58,7 +58,7 @@ export default function ResultModal({ open, onClose, result }: ResultModalProps)
                 href={article.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-primary text-body underline break-all"
+                className="text-ink text-body-sm underline break-all"
               >
                 {article.url}
               </a>
@@ -66,11 +66,11 @@ export default function ResultModal({ open, onClose, result }: ResultModalProps)
           </>
         ) : exhausted ? (
           <>
-            <p className="text-caption-strong text-primary mb-xs">신청 완료 ✅</p>
-            <h2 className="text-display-md text-ink mb-lg">
+            <p className="text-caption text-success mb-xs">신청 완료 ✅</p>
+            <h2 className="text-title-lg text-ink mb-lg">
               선택한 카테고리를 모두 읽으셨어요
             </h2>
-            <p className="text-body text-ink-muted-80 mb-lg">
+            <p className="text-body-sm text-ink-muted mb-lg">
               해당 카테고리의 아티클을 이미 다 받아보셨어요.
               <br />
               다른 카테고리를 선택해 다시 시도해보세요 🎉
@@ -81,7 +81,7 @@ export default function ResultModal({ open, onClose, result }: ResultModalProps)
         <button
           type="button"
           onClick={onClose}
-          className="rounded-pill border border-primary text-primary px-lg py-sm text-body active:scale-95 transition-transform"
+          className="rounded-md border border-border bg-canvas text-ink px-lg py-sm text-button active:scale-95 transition-transform duration-fast ease-brand"
         >
           닫기
         </button>

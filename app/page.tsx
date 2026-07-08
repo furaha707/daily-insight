@@ -4,8 +4,27 @@ import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import ResultModal from "@/components/ResultModal";
 import NotificationSettingsForm from "@/components/NotificationSettingsForm";
-import { USER_ID_STORAGE_KEY } from "@/lib/constants";
+import { USER_ID_STORAGE_KEY, DEFAULT_SEND_WEEKDAYS } from "@/lib/constants";
 import type { NotificationSettings, SelectArticleResponse } from "@/types";
+
+// 실제 수료일. 매일 자정(Asia/Seoul) 기준으로 D-day를 다시 계산한다.
+const COMPLETION_DATE = "2026-10-13";
+
+function getDdayLabel() {
+  const target = new Date(`${COMPLETION_DATE}T00:00:00+09:00`).getTime();
+  const nowSeoulDateStr = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Seoul",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+  const nowSeoul = new Date(`${nowSeoulDateStr}T00:00:00+09:00`).getTime();
+  const diffDays = Math.round((target - nowSeoul) / 86400000);
+
+  if (diffDays > 0) return `수료까지 D-${diffDays}`;
+  if (diffDays === 0) return "수료까지 D-DAY";
+  return "수료 완료";
+}
 
 function HomePageContent() {
   const searchParams = useSearchParams();
@@ -21,8 +40,15 @@ function HomePageContent() {
   const [extraLinks, setExtraLinks] = useState("");
   const [hour, setHour] = useState(9);
   const [minute, setMinute] = useState(0);
+  const [weekdays, setWeekdays] = useState<number[]>(DEFAULT_SEND_WEEKDAYS);
   const [checkingSubscription, setCheckingSubscription] = useState(true);
   const [isSubscribed, setIsSubscribed] = useState(false);
+  const [sentCount, setSentCount] = useState(0);
+  const [ddayLabel, setDdayLabel] = useState<string | null>(null);
+
+  useEffect(() => {
+    setDdayLabel(getDdayLabel());
+  }, []);
 
   useEffect(() => {
     // 페이지에 들어올 때마다 신원을 판별한다: teamId(URL, 예: 구독해지 후 리다이렉트) 우선,
@@ -48,6 +74,7 @@ function HomePageContent() {
         if (!data?.settings) return;
         const s: NotificationSettings = data.settings;
         setIsSubscribed(s.notificationEnabled);
+        setSentCount(s.sentCount);
 
         // 미구독 상태면 이전 값(카테고리/웹훅/시각 등)을 보여주지 않고 폼을 비운다.
         // 구독중일 때만 기존 값을 그대로 이어서 보여준다.
@@ -57,6 +84,7 @@ function HomePageContent() {
           setExtraLinks(s.extraLinks);
           setHour(s.sendHour);
           setMinute(s.sendMinute);
+          setWeekdays(s.sendWeekdays);
         }
 
         if (data.userId) {
@@ -91,6 +119,16 @@ function HomePageContent() {
     );
   };
 
+  const toggleWeekday = (day: number) => {
+    setWeekdays((prev) =>
+      prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day]
+    );
+  };
+
+  const scrollToForm = () => {
+    document.getElementById("subscribe-section")?.scrollIntoView({ behavior: "smooth" });
+  };
+
   const handleSubmit = async () => {
     if (selected.length === 0 || loading) return;
     setLoading(true);
@@ -122,25 +160,48 @@ function HomePageContent() {
   };
 
   return (
-    <div className="min-h-screen bg-canvas-parchment">
-      <section className="mx-auto max-w-[820px] px-lg pt-[64px] pb-xxl text-center">
-        <h1 className="text-display-lg sm:text-hero-display text-ink mb-lg">
-          새로운 인사이트를 얻을 수 있는
-          <br />
-          아티클을 선정해드려요
+    <div className="min-h-screen bg-canvas">
+      <section className="relative min-h-screen flex flex-col justify-center overflow-hidden mx-auto max-w-[1280px] px-lg md:px-xl text-left">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -top-1/4 -left-1/4 h-[600px] w-[600px] rounded-full bg-primary opacity-20 blur-[140px]"
+        />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute bottom-0 right-0 h-[400px] w-[400px] rounded-full bg-primary opacity-10 blur-[120px]"
+        />
+
+        {ddayLabel && (
+          <span className="relative inline-block rounded-pill bg-primary text-on-primary text-caption px-sm py-xxs mb-lg w-fit">
+            {ddayLabel}
+          </span>
+        )}
+        <h1 className="relative break-keep text-[40px] leading-[1.15] tracking-[-0.02em] md:text-[88px] md:leading-[1.05] md:tracking-[-0.03em] font-medium text-ink mb-md max-w-[1100px]">
+          기획력은 인사이트의 총량입니다.
         </h1>
-        <p className="text-lead text-ink-muted-80">
-          관심가는 카테고리를 선택해주세요
+        <p className="relative text-body-sm md:text-body text-ink-muted">
+          아티클 카타, 7/27 종료
         </p>
+        <p className="relative text-title-md md:text-title-lg text-primary font-medium mt-xxs">
+          수료까지 최신 인사이트를 받아보세요!
+        </p>
+        <button
+          type="button"
+          onClick={scrollToForm}
+          className="relative mt-lg inline-flex w-fit items-center gap-xxs rounded-pill bg-primary text-on-primary text-button px-lg py-sm active:bg-primary-hover active:scale-[0.98] transition-colors duration-fast ease-brand"
+        >
+          지금 신청하기
+          <span aria-hidden>→</span>
+        </button>
 
         {error && (
-          <p className="mt-lg text-caption text-red-500" role="alert">
+          <p className="relative mt-lg text-body-sm text-error" role="alert">
             {error}
           </p>
         )}
       </section>
 
-      <section className="mx-auto max-w-[720px] px-lg pb-section">
+      <section id="subscribe-section" className="mx-auto max-w-[720px] px-lg pb-section">
         <NotificationSettingsForm
           userId={userId}
           categories={selected}
@@ -154,8 +215,11 @@ function HomePageContent() {
           onHourChange={setHour}
           minute={minute}
           onMinuteChange={setMinute}
+          weekdays={weekdays}
+          onToggleWeekday={toggleWeekday}
           checkingSubscription={checkingSubscription}
           isSubscribed={isSubscribed}
+          sentCount={sentCount}
           onSubscribed={() => setIsSubscribed(true)}
           onUnsubscribed={() => setIsSubscribed(false)}
           onResetIdentity={resetIdentity}

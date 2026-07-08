@@ -15,7 +15,7 @@ export default function CategorySelector({
     <div
       role="group"
       aria-label="관심 카테고리 선택"
-      className="flex flex-wrap justify-center gap-sm max-w-[720px] mx-auto"
+      className="flex flex-wrap justify-start gap-xxs"
     >
       {CATEGORIES.map((category) => {
         const isSelected = selected.includes(category);
@@ -26,10 +26,10 @@ export default function CategorySelector({
             aria-pressed={isSelected}
             onClick={() => onToggle(category)}
             className={[
-              "rounded-pill px-lg py-sm text-caption transition-all duration-150 active:scale-95",
+              "rounded-pill px-md py-xs text-body-sm transition-all duration-fast ease-brand active:scale-95 border",
               isSelected
-                ? "bg-primary text-white border-2 border-primary-focus"
-                : "bg-canvas text-ink border border-hairline hover:border-primary",
+                ? "bg-primary text-on-primary border-transparent"
+                : "bg-canvas text-ink-muted border-border hover:border-primary",
             ].join(" ")}
           >
             {category}
