@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import CategorySelector from "@/components/CategorySelector";
 import SlackWebhookHelpModal from "@/components/SlackWebhookHelpModal";
 import SubscribeSuccessModal from "@/components/SubscribeSuccessModal";
+import UnsubscribeByeModal from "@/components/UnsubscribeByeModal";
 import { extractSlackTeamId } from "@/lib/slack";
 import { DEFAULT_MESSAGE_TEMPLATE } from "@/lib/constants";
 
@@ -24,6 +25,7 @@ interface NotificationSettingsFormProps {
   isSubscribed: boolean;
   onSubscribed: () => void;
   onUnsubscribed: () => void;
+  onResetIdentity: () => void;
 }
 
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
@@ -51,6 +53,7 @@ export default function NotificationSettingsForm({
   isSubscribed,
   onSubscribed,
   onUnsubscribed,
+  onResetIdentity,
 }: NotificationSettingsFormProps) {
   const [loading, setLoading] = useState(false);
   const [unsubscribing, setUnsubscribing] = useState(false);
@@ -60,6 +63,7 @@ export default function NotificationSettingsForm({
   const [origin, setOrigin] = useState("");
   const [helpOpen, setHelpOpen] = useState(false);
   const [successOpen, setSuccessOpen] = useState(false);
+  const [byeOpen, setByeOpen] = useState(false);
 
   useEffect(() => {
     setOrigin(window.location.origin);
@@ -100,6 +104,7 @@ export default function NotificationSettingsForm({
         type: "success",
         message: `매일 ${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")} 구독 설정됨`,
       });
+      setByeOpen(false);
       setSuccessOpen(true);
     } catch (e) {
       setStatus({
@@ -127,7 +132,8 @@ export default function NotificationSettingsForm({
       if (!res.ok) throw new Error("구독 해지에 실패했습니다.");
 
       onUnsubscribed();
-      setStatus({ type: "success", message: "구독을 해지했어요." });
+      setSuccessOpen(false);
+      setByeOpen(true);
     } catch (e) {
       setStatus({
         type: "error",
@@ -298,6 +304,13 @@ export default function NotificationSettingsForm({
         onClose={() => setSuccessOpen(false)}
         hour={hour}
         minute={minute}
+      />
+      <UnsubscribeByeModal
+        open={byeOpen}
+        onConfirm={() => {
+          setByeOpen(false);
+          onResetIdentity();
+        }}
       />
     </div>
   );

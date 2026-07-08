@@ -47,12 +47,18 @@ function HomePageContent() {
       .then((data) => {
         if (!data?.settings) return;
         const s: NotificationSettings = data.settings;
-        setSelected(s.categories);
-        setWebhookUrl(s.slackWebhookUrl);
-        setExtraLinks(s.extraLinks);
-        setHour(s.sendHour);
-        setMinute(s.sendMinute);
         setIsSubscribed(s.notificationEnabled);
+
+        // 미구독 상태면 이전 값(카테고리/웹훅/시각 등)을 보여주지 않고 폼을 비운다.
+        // 구독중일 때만 기존 값을 그대로 이어서 보여준다.
+        if (s.notificationEnabled) {
+          setSelected(s.categories);
+          setWebhookUrl(s.slackWebhookUrl);
+          setExtraLinks(s.extraLinks);
+          setHour(s.sendHour);
+          setMinute(s.sendMinute);
+        }
+
         if (data.userId) {
           localStorage.setItem(USER_ID_STORAGE_KEY, data.userId);
           setUserId(data.userId);
@@ -66,6 +72,15 @@ function HomePageContent() {
   const persistUserId = (id: string) => {
     localStorage.setItem(USER_ID_STORAGE_KEY, id);
     setUserId(id);
+  };
+
+  const resetIdentity = () => {
+    localStorage.removeItem(USER_ID_STORAGE_KEY);
+    setUserId(null);
+
+    const url = new URL(window.location.href);
+    url.search = "";
+    window.history.replaceState(null, "", url.toString());
   };
 
   const toggleCategory = (category: string) => {
@@ -143,6 +158,7 @@ function HomePageContent() {
           isSubscribed={isSubscribed}
           onSubscribed={() => setIsSubscribed(true)}
           onUnsubscribed={() => setIsSubscribed(false)}
+          onResetIdentity={resetIdentity}
         />
       </section>
 
