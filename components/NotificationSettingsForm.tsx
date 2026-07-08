@@ -216,7 +216,7 @@ export default function NotificationSettingsForm({
           className="w-full rounded-md border border-border bg-canvas px-md py-sm text-body-sm text-ink placeholder:text-ink-muted focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary resize-none"
         />
         <span className="block text-fine-print text-ink-muted mt-xxs">
-          매일 추천 아티클과 함께 이 내용도 그대로 포함해서 보내드려요.
+          추천 아티클과 함께 이 내용도 그대로 포함해서 보내드려요.
         </span>
       </label>
 

@@ -4,7 +4,7 @@ import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import ResultModal from "@/components/ResultModal";
 import NotificationSettingsForm from "@/components/NotificationSettingsForm";
-import { USER_ID_STORAGE_KEY, DEFAULT_SEND_WEEKDAYS } from "@/lib/constants";
+import { USER_ID_STORAGE_KEY } from "@/lib/constants";
 import type { NotificationSettings, SelectArticleResponse } from "@/types";
 
 // 실제 수료일. 매일 자정(Asia/Seoul) 기준으로 D-day를 다시 계산한다.
@@ -21,9 +21,9 @@ function getDdayLabel() {
   const nowSeoul = new Date(`${nowSeoulDateStr}T00:00:00+09:00`).getTime();
   const diffDays = Math.round((target - nowSeoul) / 86400000);
 
-  if (diffDays > 0) return `수료까지 D-${diffDays}`;
-  if (diffDays === 0) return "수료까지 D-DAY";
-  return "수료 완료";
+  if (diffDays > 0) return `D-${diffDays}`;
+  if (diffDays === 0) return "D-DAY";
+  return null; // 수료일이 지났으면 D-day 표기를 생략한다.
 }
 
 function HomePageContent() {
@@ -40,7 +40,7 @@ function HomePageContent() {
   const [extraLinks, setExtraLinks] = useState("");
   const [hour, setHour] = useState(9);
   const [minute, setMinute] = useState(0);
-  const [weekdays, setWeekdays] = useState<number[]>(DEFAULT_SEND_WEEKDAYS);
+  const [weekdays, setWeekdays] = useState<number[]>([]);
   const [checkingSubscription, setCheckingSubscription] = useState(true);
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [sentCount, setSentCount] = useState(0);
@@ -126,7 +126,12 @@ function HomePageContent() {
   };
 
   const scrollToForm = () => {
-    document.getElementById("subscribe-section")?.scrollIntoView({ behavior: "smooth" });
+    const el = document.getElementById("subscribe-section");
+    if (!el) return;
+    // 상단 고정 헤더(h-16 = 64px)에 폼 카드의 맨 위 테두리가 가리지 않도록 오프셋을 둔다.
+    const headerOffset = 64;
+    const top = el.getBoundingClientRect().top + window.scrollY - headerOffset;
+    window.scrollTo({ top, behavior: "smooth" });
   };
 
   const handleSubmit = async () => {
@@ -160,30 +165,28 @@ function HomePageContent() {
   };
 
   return (
-    <div className="min-h-screen bg-canvas">
-      <section className="relative min-h-screen flex flex-col justify-center overflow-hidden mx-auto max-w-[1280px] px-lg md:px-xl text-left">
-        <div
-          aria-hidden
-          className="pointer-events-none absolute -top-1/4 -left-1/4 h-[600px] w-[600px] rounded-full bg-primary opacity-20 blur-[140px]"
-        />
-        <div
-          aria-hidden
-          className="pointer-events-none absolute bottom-0 right-0 h-[400px] w-[400px] rounded-full bg-primary opacity-10 blur-[120px]"
-        />
+    <div className="relative min-h-screen bg-canvas overflow-hidden">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -top-1/4 -left-1/4 h-[600px] w-[600px] rounded-full bg-primary opacity-20 blur-[140px]"
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute bottom-0 right-0 h-[400px] w-[400px] rounded-full bg-primary opacity-10 blur-[120px]"
+      />
 
-        {ddayLabel && (
-          <span className="relative inline-block rounded-pill bg-primary text-on-primary text-caption px-sm py-xxs mb-lg w-fit">
-            {ddayLabel}
-          </span>
-        )}
+      <section className="relative min-h-screen flex flex-col justify-center mx-auto max-w-[1280px] px-lg md:px-xl text-left">
         <h1 className="relative break-keep text-[40px] leading-[1.15] tracking-[-0.02em] md:text-[88px] md:leading-[1.05] md:tracking-[-0.03em] font-medium text-ink mb-md max-w-[1100px]">
-          기획력은 인사이트의 총량입니다.
+          기획력은 <br />
+          인사이트의 총량입니다.
         </h1>
         <p className="relative text-body-sm md:text-body text-ink-muted">
           아티클 카타, 7/27 종료
         </p>
         <p className="relative text-title-md md:text-title-lg text-primary font-medium mt-xxs">
-          수료까지 최신 인사이트를 받아보세요!
+          {ddayLabel
+            ? `${ddayLabel} 수료까지 최신 인사이트를 받아보세요!`
+            : "수료까지 최신 인사이트를 받아보세요!"}
         </p>
         <button
           type="button"
@@ -201,7 +204,7 @@ function HomePageContent() {
         )}
       </section>
 
-      <section id="subscribe-section" className="mx-auto max-w-[720px] px-lg pb-section">
+      <section id="subscribe-section" className="relative mx-auto max-w-[720px] px-lg pb-section">
         <NotificationSettingsForm
           userId={userId}
           categories={selected}
