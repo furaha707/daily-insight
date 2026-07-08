@@ -8,14 +8,19 @@ Next.js 15 (App Router) + Tailwind CSS + Supabase로 구현했고, 설정한 시
 Supabase 대시보드 → **SQL Editor**에서 아래 순서로 실행하세요.
 
 1. **신규 설치라면** [`database/schema.sql`](database/schema.sql) 전체 실행 → `users`, `articles`, `sent_log` 테이블 + RLS 생성 (Slack 알림 컬럼 포함, 최신 버전)
-2. [`database/seed.sql`](database/seed.sql) 실행 → 아티클 103건 삽입 (재실행해도 중복 안 쌓임)
+2. [`database/seed.sql`](database/seed.sql) 실행 → 아티클 400건 삽입 (재실행해도 중복 안 쌓임)
 3. **이미 이전 버전으로 설치되어 있었다면** [`database/migration-notifications.sql`](database/migration-notifications.sql) 실행 → `users`에 Slack 알림 컬럼 추가 + `anon` 직접 접근 차단
 4. [`database/migration-unsubscribe.sql`](database/migration-unsubscribe.sql) 실행 → `users.slack_team_id` 컬럼 추가 (구독 해지 링크용, 신규 설치는 `schema.sql`에 이미 포함되어 있어 생략 가능)
 5. [`database/migration-extra-links.sql`](database/migration-extra-links.sql) 실행 → `users.extra_links` 컬럼 추가 (신규 설치는 `schema.sql`에 이미 포함되어 있어 생략 가능)
 6. [`database/migration-weekdays.sql`](database/migration-weekdays.sql) 실행 → `users.send_weekdays` 컬럼 추가 (발송 요일 선택, 신규 설치는 `schema.sql`에 이미 포함되어 있어 생략 가능)
 7. [`database/migration-unsubscribe-feedback.sql`](database/migration-unsubscribe-feedback.sql) 실행 → `unsubscribe_feedback` 테이블 생성 (구독 해지 사유 설문, 신규 설치는 `schema.sql`에 이미 포함되어 있어 생략 가능)
+8. [`database/migration-articles-schema.sql`](database/migration-articles-schema.sql) 실행 → `articles`를 제목/글쓴이/발행일/카테고리/원문링크 구조로 정리(`skill_type`/`recommend_reason` 컬럼 삭제) + 기존 데이터 초기화. **주의**: `articles`를 비우면 `sent_log`도 `on delete cascade`로 함께 비워져 기존 구독자의 "발송됨" 누적 횟수가 초기화됩니다. 신규 설치는 `schema.sql`에 이미 반영되어 있어 생략 가능. 실행 직후 반드시 2번의 `seed.sql`을 다시 실행하세요.
 
 > ⚠️ `seed.sql`을 실수로 여러 번 실행해 `articles`에 중복이 쌓였다면 [`database/cleanup-duplicates.sql`](database/cleanup-duplicates.sql)을 실행해 정리하세요.
+
+### 아티클 카테고리
+
+카테고리는 **기획 / IT / 개발 / 협업 / 디자인 / AI / 커뮤니케이션 / 비즈니스 / 데이터 / UIUX** 10개로 고정되어 있습니다([lib/categories.ts](lib/categories.ts)). 메인 화면의 카테고리 선택 UI와 `articles.categories` 배열 값이 반드시 이 10개 문자열과 정확히 일치해야 필터링(`overlaps`)이 정상 동작합니다.
 
 ### 보안 모델
 
@@ -160,15 +165,16 @@ types/
   index.ts                       DB/응답 타입
 database/
   schema.sql                     최신 스키마 (users/articles/sent_log/unsubscribe_feedback + Slack 컬럼, anon 정책 없음)
-  seed.sql                       CSV → articles 시드 데이터 (103건)
+  seed.sql                       CSV → articles 시드 데이터 (400건, 제목/글쓴이/발행일/카테고리/원문링크)
   cleanup-duplicates.sql         (1회용) seed.sql 중복 실행으로 쌓인 articles 중복 제거
   migration-notifications.sql    (기존 설치용) Slack 컬럼 추가 + anon 접근 차단 마이그레이션
   migration-unsubscribe.sql      (기존 설치용) slack_team_id 컬럼 추가
   migration-extra-links.sql      (기존 설치용) extra_links 컬럼 추가
   migration-weekdays.sql         (기존 설치용) send_weekdays 컬럼 추가
   migration-unsubscribe-feedback.sql  (기존 설치용) unsubscribe_feedback 테이블 생성
+  migration-articles-schema.sql  (기존 설치용) articles를 제목/글쓴이/발행일/카테고리/원문링크 구조로 정리 + 데이터 초기화
   cron-setup.sql                 pg_cron으로 Edge Function 10분 주기 호출 설정
-  db_article1.csv, db_article2.csv   원본 아티클 데이터
+  surfit_crawled.csv, yozm_plan_crawled.csv   원본 아티클 데이터 (seed.sql 생성 소스)
 supabase/
   functions/send-daily-articles/index.ts   Slack 발송 Edge Function (Deno)
 ```

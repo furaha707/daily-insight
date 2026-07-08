@@ -53,16 +53,18 @@ create index if not exists users_slack_team_id_idx on public.users (slack_team_i
 create table if not exists public.articles (
   id                uuid        default gen_random_uuid() primary key,
   title             text        not null,
-  url               text        not null unique,
-  categories        text[]      not null default '{}',
-  skill_type        text,                 -- 소프트스킬 / 하드스킬
   author            text,
-  recommend_reason  text,
   published_at      date,
+  categories        text[]      not null default '{}',
+  url               text        not null unique,
   created_at        timestamptz default now()
 );
 
-comment on table public.articles is '추천 대상 아티클 목록 (제목/링크/카테고리 등)';
+comment on table public.articles is '추천 대상 아티클 목록 (제목/글쓴이/발행일/카테고리/원문링크)';
+comment on column public.articles.author is '글쓴이';
+comment on column public.articles.published_at is '발행일';
+comment on column public.articles.categories is '카테고리 (기획/IT/개발/협업/디자인/AI/커뮤니케이션/비즈니스/데이터/UIUX 중 다중 선택)';
+comment on column public.articles.url is '원문링크';
 
 create index if not exists articles_categories_idx on public.articles using gin (categories);
 

@@ -34,12 +34,10 @@ export interface NotificationSettingsResponse {
 export interface DbArticle {
   id: string;
   title: string;
-  url: string;
-  categories: string[];
-  skill_type: string | null;
   author: string | null;
-  recommend_reason: string | null;
   published_at: string | null;
+  categories: string[];
+  url: string;
   created_at: string;
 }
 
