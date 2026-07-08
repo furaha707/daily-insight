@@ -33,12 +33,13 @@ export default function RootLayout({
       </head>
       <body className="antialiased">
         <header className="fixed top-0 left-0 right-0 z-40 h-16 bg-canvas border-b border-border flex items-center justify-center">
-          <span
+          <a
+            href="https://daily-insight-seven.vercel.app/"
             className="text-[24px] tracking-wide text-primary"
             style={{ fontFamily: "var(--font-blacksword)" }}
           >
             dailyInsight
-          </span>
+          </a>
         </header>
         <main className="pt-16">{children}</main>
 

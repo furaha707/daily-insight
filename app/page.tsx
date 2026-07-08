@@ -176,7 +176,7 @@ function HomePageContent() {
       />
 
       <section className="relative min-h-screen flex flex-col justify-center mx-auto max-w-[1280px] px-lg md:px-xl text-left">
-        <h1 className="relative break-keep text-[40px] leading-[1.15] tracking-[-0.02em] md:text-[88px] md:leading-[1.05] md:tracking-[-0.03em] font-medium text-ink mb-md max-w-[1100px]">
+        <h1 className="relative break-keep text-[30px] leading-[1.15] tracking-[-0.02em] md:text-[78px] md:leading-[1.05] md:tracking-[-0.03em] font-medium text-ink mb-md max-w-[1100px]">
           기획력은 <br />
           인사이트의 총량입니다.
         </h1>
