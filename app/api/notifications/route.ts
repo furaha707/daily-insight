@@ -135,6 +135,9 @@ export async function PUT(req: NextRequest) {
     send_minute: sendMinute,
     send_weekdays: sendWeekdays,
     notification_enabled: true,
+    // 구독 설정을 저장할 때마다 "오늘 발송 완료" 플래그를 초기화한다.
+    // 이미 오늘 발송을 받았더라도 설정을 바꾸면 그 시각 기준으로 다시 받을 수 있게 하기 위함.
+    last_notified_date: null,
     updated_at: new Date().toISOString(),
   };
 

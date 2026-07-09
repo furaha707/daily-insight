@@ -19,7 +19,13 @@ export async function POST(req: NextRequest) {
 
   const { error } = await supabaseAdmin
     .from("users")
-    .update({ notification_enabled: false, updated_at: new Date().toISOString() })
+    .update({
+      notification_enabled: false,
+      // 해지 시점에도 "오늘 발송 완료" 플래그를 초기화해서, 같은 날 재구독하면
+      // last_notified_date가 오늘로 남아있어 발송이 막히는 일이 없게 한다.
+      last_notified_date: null,
+      updated_at: new Date().toISOString(),
+    })
     .eq("id", userId);
 
   if (error) {
