@@ -168,11 +168,11 @@ export default function NotificationSettingsForm({
         {checkingSubscription ? (
           <p className="text-body-sm text-ink-muted">구독 상태 확인 중...</p>
         ) : isSubscribed ? (
-          <p className="text-title-md text-on-primary font-semibold">
+          <p className="text-[18px] leading-[1.3] tracking-[-0.015em] text-on-primary font-semibold">
             ✅ 구독중 ({sentCount}회 발송됨)
           </p>
         ) : (
-          <p className="text-title-md text-on-primary font-semibold">
+          <p className="text-[18px] leading-[1.3] tracking-[-0.015em] text-on-primary font-semibold">
             미구독중입니다. 바로 신청해보세요!
           </p>
         )}
@@ -212,7 +212,7 @@ export default function NotificationSettingsForm({
           value={extraLinks}
           onChange={(e) => onExtraLinksChange(e.target.value)}
           rows={3}
-          placeholder="예: 채용공고 링크"
+          placeholder="자유롭게 입력하세요"
           className="w-full rounded-md border border-border bg-canvas px-md py-sm text-body-sm text-ink placeholder:text-ink-muted focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary resize-none"
         />
         <span className="block text-fine-print text-ink-muted mt-xxs">
